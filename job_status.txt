@@ -1,0 +1,94 @@
+USE [OPS_DB]
+GO
+ 
+/****** Object:  StoredProcedure [dbo].[Job_Status]    Script Date: 26.08.2025 14:39:35 ******/
+SET ANSI_NULLS ON
+GO
+ 
+SET QUOTED_IDENTIFIER ON
+GO
+ 
+ 
+ 
+/* 
+Developed By	: Abhishek Kotha
+Date			: 10th March 2013
+Purpose			: To know status of the BODS job based on PID 
+Intended For	: Monitoring, Operations and Development Teams
+Version			: 1.0 (Basic Version)
+*/
+CREATE procedure [dbo].[Job_Status]
+@host int =NULL,
+@data varchar(max) = null
+--WITH EXECUTE AS 'Deploy\I800915'
+AS
+SET NOCOUNT ON;
+IF @host is NOT NULL  
+BEGIN
+select
+sp.login_time,
+sp.spid, sqltext.TEXT, (sp.lastwaittype + ' (' + convert(varchar(50), sp.waittime) + ')') as waittype,cpu, blocked,
+sd.name as DB_Name,sum(dec.num_reads) as reads,sum(dec.num_writes) as writes,physical_io,memusage,
+last_batch,status,sp.loginame, hostname,program_name,hostprocess,cmd
+from sys.databases sd, sys.sysprocesses sp left outer join sys.dm_exec_connections dec
+CROSS APPLY sys.dm_exec_sql_text(most_recent_sql_handle) AS sqltext
+on sp.spid = dec.session_id
+where sp.dbid = sd.database_id 
+and sp.spid = dec.session_id 
+and sp.hostprocess = @host 
+and sp.spid > 50
+group by sp.spid, sp.login_time,
+sp.loginame,sp.waittype, blocked,
+sd.name,cpu,physical_io,memusage,
+last_batch  ,status,hostname,program_name,hostprocess,cmd,dec.num_reads, dec.num_writes,dec.session_id,
+sp.lastwaittype, sp.waittime, sqltext.text
+order by sp.login_time
+END
+IF @host is NULL and @data is null
+BEGIN
+select
+sp.login_time,
+sp.spid, sqltext.TEXT, (sp.lastwaittype + ' (' + convert(varchar(50), sp.waittime) + ')') as waittype,cpu, blocked,
+sd.name as DB_Name,sum(dec.num_reads) as reads,sum(dec.num_writes) as writes,physical_io,memusage,
+last_batch,status,sp.loginame, hostname,program_name,hostprocess,cmd
+from sys.databases sd, sys.sysprocesses sp left outer join sys.dm_exec_connections dec
+CROSS APPLY sys.dm_exec_sql_text(most_recent_sql_handle) AS sqltext
+on sp.spid = dec.session_id
+where sp.dbid = sd.database_id 
+and sp.spid = dec.session_id 
+--and sp.hostprocess = @host 
+and sp.spid > 50
+AND SP.program_name = 'SAP Data Services Engine'     
+group by sp.spid, sp.login_time,
+sp.loginame,sp.waittype, blocked,
+sd.name,cpu,physical_io,memusage,
+last_batch  ,status,hostname,program_name,hostprocess,cmd,dec.num_reads, dec.num_writes,dec.session_id,
+sp.lastwaittype, sp.waittime, sqltext.text
+order by sp.login_time
+END 
+IF @data = 'DBA'
+BEGIN
+select
+sp.login_time,
+sp.spid, sqltext.TEXT, (sp.lastwaittype + ' (' + convert(varchar(50), sp.waittime) + ')') as waittype,cpu, blocked,
+sd.name as DB_Name,sum(dec.num_reads) as reads,sum(dec.num_writes) as writes,physical_io,memusage,
+last_batch,status,sp.loginame, hostname,program_name,hostprocess,cmd
+from sys.databases sd, sys.sysprocesses sp left outer join sys.dm_exec_connections dec
+CROSS APPLY sys.dm_exec_sql_text(most_recent_sql_handle) AS sqltext
+on sp.spid = dec.session_id
+where sp.dbid = sd.database_id 
+and sp.spid = dec.session_id 
+--and sp.hostprocess = @host 
+and sp.spid > 50
+--AND SP.program_name = 'SAP Data Services Engine'     
+group by sp.spid, sp.login_time,
+sp.loginame,sp.waittype, blocked,
+sd.name,cpu,physical_io,memusage,
+last_batch  ,status,hostname,program_name,hostprocess,cmd,dec.num_reads, dec.num_writes,dec.session_id,
+sp.lastwaittype, sp.waittime, sqltext.text
+order by sp.login_time
+END
+ 
+GO
+ 
+ 
